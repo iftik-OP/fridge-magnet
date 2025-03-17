@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:shopping_list/models/list.dart';
 
 class User {
@@ -6,25 +5,29 @@ class User {
   final String name;
   final List<ShoppingList> lists;
   final String? profilePicture;
+  final String uid;
 
   User({
     required this.phoneNumber,
     required this.name,
     required this.lists,
     this.profilePicture,
+    required this.uid,
   });
 
   User copyWith({
     String? phoneNumber,
-    String? name, 
+    String? name,
     List<ShoppingList>? lists,
     String? profilePicture,
+    String? uid,
   }) {
     return User(
       phoneNumber: phoneNumber ?? this.phoneNumber,
       name: name ?? this.name,
       lists: lists ?? this.lists,
       profilePicture: profilePicture ?? this.profilePicture,
+      uid: uid ?? this.uid,
     );
   }
 
@@ -34,6 +37,7 @@ class User {
       'name': name,
       'lists': lists.map((list) => list.toMap()).toList(),
       'profilePicture': profilePicture,
+      'uid': uid,
     };
   }
 
@@ -45,6 +49,7 @@ class User {
         (map['lists'] as List).map((list) => ShoppingList.fromMap(list)),
       ),
       profilePicture: map['profilePicture'] as String?,
+      uid: map['uid'] ?? '',
     );
   }
 }

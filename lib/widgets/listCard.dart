@@ -1,31 +1,20 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shopping_list/screens/listScreen.dart';
-import 'package:shopping_list/models/user.dart';
+import 'package:shopping_list/models/list.dart';
 
 class ListCard extends StatelessWidget {
-  final String listName;
-  final List<User> collaborators;
-  final Color startColor;
-  final Color endColor;
-  final String imageAsset;
+  final ShoppingList list;
 
   /// Creates a shopping list card with collaborator avatars.
-  ///
-  /// If colors are not provided, random gradient colors will be generated.
   const ListCard({
-    Key? key,
-    required this.listName,
-    required this.collaborators,
-    this.startColor = Colors.transparent,
-    this.endColor = Colors.transparent,
-    this.imageAsset = 'assets/stickers/cup.png',
-  }) : super(key: key);
+    super.key,
+    required this.list,
+  });
 
   /// Creates a shopping list card with random gradient colors.
   factory ListCard.random({
-    required String listName,
-    required List<User> collaborators,
+    required ShoppingList list,
   }) {
     final random = Random();
 
@@ -45,43 +34,43 @@ class ListCard extends StatelessWidget {
     );
 
     return ListCard(
-      listName: listName,
-      collaborators: collaborators,
-      startColor: startColor,
-      endColor: endColor,
+      list: list.copyWith(
+        startColor: startColor,
+        endColor: endColor,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     // Use random colors if transparent colors were provided
-    final Color actualStartColor = startColor == Colors.transparent
+    final Color actualStartColor = list.startColor == Colors.transparent
         ? Color.fromRGBO(
             150 + Random().nextInt(105),
             150 + Random().nextInt(105),
             150 + Random().nextInt(105),
             1,
           )
-        : startColor;
+        : list.startColor;
 
-    final Color actualEndColor = endColor == Colors.transparent
+    final Color actualEndColor = list.endColor == Colors.transparent
         ? Color.fromRGBO(
             150 + Random().nextInt(105),
             150 + Random().nextInt(105),
             150 + Random().nextInt(105),
             1,
           )
-        : endColor;
+        : list.endColor;
 
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => ListScreen(
-              listName: listName,
-              collaborators: collaborators,
-              startColor: actualStartColor,
-              endColor: actualEndColor,
+              list: list.copyWith(
+                startColor: actualStartColor,
+                endColor: actualEndColor,
+              ),
             ),
           ),
         );
@@ -96,7 +85,7 @@ class ListCard extends StatelessWidget {
               left: 0,
               right: 0,
               child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 0),
+                padding: const EdgeInsets.symmetric(vertical: 0),
                 child: Container(
                   height: 120,
                   margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -121,11 +110,11 @@ class ListCard extends StatelessWidget {
                         top: 16,
                         left: 16,
                         child: Hero(
-                          tag: 'list_title_${listName}',
+                          tag: 'list_title_${list.id}',
                           child: Material(
                             color: Colors.transparent,
                             child: Text(
-                              listName,
+                              list.name,
                               style: const TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,
@@ -145,32 +134,44 @@ class ListCard extends StatelessWidget {
                       Positioned(
                         bottom: 5,
                         right: 16,
-                        child: _buildCollaboratorAvatars(),
+                        child: Hero(
+                          tag: 'list_collaborators_${list.id}',
+                          child: Material(
+                            color: Colors.transparent,
+                            child: _buildCollaboratorAvatars(),
+                          ),
+                        ),
                       ),
                       Positioned(
                         bottom: 16,
                         left: 16,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.shopping_cart_outlined,
-                                  color: Colors.white, size: 10),
-                              SizedBox(width: 4),
-                              Text(
-                                "Tap to view items",
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 12),
+                        child: Hero(
+                          tag: 'list_items_${list.id}',
+                          child: Material(
+                            color: Colors.transparent,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                            ],
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.shopping_cart_outlined,
+                                      color: Colors.white, size: 10),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "${list.items.length} items",
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -183,7 +184,7 @@ class ListCard extends StatelessWidget {
               top: 0,
               right: 0,
               child: Image.asset(
-                imageAsset,
+                'assets/stickers/${list.imageAsset}',
                 width: 100,
               ),
             ),
@@ -197,11 +198,11 @@ class ListCard extends StatelessWidget {
     // Maximum number of avatars to show before using a "+X more" indicator
     const int maxDisplayed = 3;
 
-    final displayCount = collaborators.length <= maxDisplayed
-        ? collaborators.length
+    final displayCount = list.collaborators.length <= maxDisplayed
+        ? list.collaborators.length
         : maxDisplayed;
 
-    final hasMoreCollaborators = collaborators.length > maxDisplayed;
+    final hasMoreCollaborators = list.collaborators.length > maxDisplayed;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -223,7 +224,7 @@ class ListCard extends StatelessWidget {
                       radius: 10,
                       backgroundColor: Colors.grey[300],
                       child: Text(
-                        collaborators[i].name[0].toUpperCase(),
+                        list.collaborators[i].name[0].toUpperCase(),
                         style: const TextStyle(
                           color: Colors.black87,
                           fontWeight: FontWeight.bold,
@@ -245,7 +246,7 @@ class ListCard extends StatelessWidget {
                       radius: 10,
                       backgroundColor: Colors.grey[800],
                       child: Text(
-                        "+${collaborators.length - maxDisplayed}",
+                        "+${list.collaborators.length - maxDisplayed}",
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,

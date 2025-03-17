@@ -1,6 +1,4 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:shopping_list/screens/homeScreen.dart';
 import 'package:shopping_list/services/firebaseServices.dart';
 
 class OTPScreen extends StatelessWidget {
@@ -12,7 +10,7 @@ class OTPScreen extends StatelessWidget {
 
   void _handleVerify(BuildContext context) {
     FirebaseServices()
-        .signInWithPhoneNumber(verificationId, otpController.text, context);
+        .signInWithPhoneNumber(verificationId, otpController.text, phoneNumber, context);
   }
 
   @override

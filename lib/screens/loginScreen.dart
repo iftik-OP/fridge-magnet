@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shopping_list/screens/homeScreen.dart';
-import 'package:shopping_list/screens/otpScreen.dart';
 import 'package:shopping_list/services/firebaseServices.dart';
 
 class LoginScreen extends StatelessWidget {
