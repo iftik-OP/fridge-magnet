@@ -19,63 +19,69 @@ class FirebaseServices {
 
   Future<auth.User?> signInWithGoogle() async {
     try {
-      print('Starting Google Sign-In flow...');
+      // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return null;
 
-      print('Google user email: ${googleUser.email}');
+      if (googleUser == null) {
+        print('Google Sign In was aborted by user');
+        return null;
+      }
+
+      // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
+      // Create a new credential
       final credential = auth.GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      final auth.UserCredential userCredential =
-          await _auth.signInWithCredential(credential);
-      final auth.User? firebaseUser = userCredential.user;
+      // Sign in to Firebase with the Google credential
+      final userCredential = await _auth.signInWithCredential(credential);
+      final firebaseUser = userCredential.user;
 
-      if (firebaseUser == null) return null;
+      if (firebaseUser == null) {
+        print('Firebase user is null after Google Sign In');
+        return null;
+      }
 
-      print('Firebase user UID: ${firebaseUser.uid}');
+      print('Google Sign In successful for user: ${firebaseUser.email}');
 
-      // Check if user document exists
+      // Check if user exists in Firestore
       final userDoc =
           await _firestore.collection('users').doc(firebaseUser.uid).get();
-      print('User document exists: ${userDoc.exists}');
 
       if (!userDoc.exists) {
-        print('Creating new user document...');
-        // Create new user document
+        // Create new user document if it doesn't exist
         final newUser = app_models.User(
           uid: firebaseUser.uid,
           email: firebaseUser.email!,
-          name: firebaseUser.displayName ?? '',
+          name: firebaseUser.displayName ?? 'Unknown User',
           lists: [],
-          profilePicture: firebaseUser.photoURL, // Add profile picture
+          profilePicture: firebaseUser.photoURL,
         );
 
-        print('New user data: ${newUser.toMap()}');
         await _firestore
             .collection('users')
             .doc(firebaseUser.uid)
             .set(newUser.toMap());
-        print('User document created successfully');
+        print('Created new user document for: ${newUser.name}');
       } else {
-        print('Existing user data: ${userDoc.data()}');
         // Update profile picture if it has changed
-        if (userDoc.data()?['profilePicture'] != firebaseUser.photoURL) {
+        final currentUser = app_models.User.fromMap(userDoc.data()!);
+        if (currentUser.profilePicture != firebaseUser.photoURL) {
           await _firestore.collection('users').doc(firebaseUser.uid).update({
             'profilePicture': firebaseUser.photoURL,
           });
+          print('Updated profile picture for: ${currentUser.name}');
         }
       }
 
       return firebaseUser;
     } catch (e) {
       print('Error during Google Sign-In: $e');
-      return null;
+      rethrow;
     }
   }
 

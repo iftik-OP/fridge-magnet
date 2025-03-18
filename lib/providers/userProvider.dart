@@ -32,8 +32,7 @@ class UserProvider extends ChangeNotifier {
       Map<String, dynamic>? userData;
 
       while (currentTry < maxRetries && !documentFound) {
-        final userDoc =
-            await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        final userDoc = await _firestore.collection('users').doc(uid).get();
         debugPrint(
             'Attempt ${currentTry + 1}: User document exists: ${userDoc.exists}');
 
@@ -42,10 +41,26 @@ class UserProvider extends ChangeNotifier {
           userData = userDoc.data() as Map<String, dynamic>;
           debugPrint('User data found: $userData');
         } else {
-          currentTry++;
-          if (currentTry < maxRetries) {
-            debugPrint('Document not found, waiting before retry...');
-            await Future.delayed(Duration(milliseconds: 500 * currentTry));
+          // Create new user document if it doesn't exist
+          final authUser = await _firestore.collection('auth').doc(uid).get();
+          if (authUser.exists) {
+            final authData = authUser.data() as Map<String, dynamic>;
+            userData = {
+              'uid': uid,
+              'email': authData['email'],
+              'name': authData['name'],
+              'lists': [],
+              'profilePicture': authData['profilePicture'],
+            };
+            await _firestore.collection('users').doc(uid).set(userData);
+            documentFound = true;
+            debugPrint('New user document created: $userData');
+          } else {
+            currentTry++;
+            if (currentTry < maxRetries) {
+              debugPrint('Document not found, waiting before retry...');
+              await Future.delayed(Duration(milliseconds: 500 * currentTry));
+            }
           }
         }
       }
