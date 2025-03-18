@@ -21,11 +21,11 @@ class ListScreen extends StatefulWidget {
 class _ListScreenState extends State<ListScreen> {
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _listNameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final ListServices _listServices = ListServices();
   String _selectedSticker = '';
   late ShoppingList _currentList;
-  bool _showPhoneField = false;
+  bool _showEmailField = false;
   bool _isLoadingCollaborator = false;
 
   @override
@@ -40,22 +40,22 @@ class _ListScreenState extends State<ListScreen> {
   void dispose() {
     _textController.dispose();
     _listNameController.dispose();
-    _phoneController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
   void _resetDialogState() {
     setState(() {
-      _showPhoneField = false;
-      _phoneController.clear();
+      _showEmailField = false;
+      _emailController.clear();
     });
   }
 
   void _addCollaborator(
-      BuildContext context, String phoneNumber, Function setDialogState) async {
-    if (phoneNumber.isEmpty) {
+      BuildContext context, String email, Function setDialogState) async {
+    if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a phone number')),
+        const SnackBar(content: Text('Please enter an email')),
       );
       return;
     }
@@ -66,7 +66,7 @@ class _ListScreenState extends State<ListScreen> {
 
     try {
       final userService = UserServices();
-      final collaborator = await userService.getUserByPhone(phoneNumber);
+      final collaborator = await userService.getUserByEmail(email);
 
       if (collaborator == null) {
         if (context.mounted) {
@@ -99,8 +99,8 @@ class _ListScreenState extends State<ListScreen> {
       });
 
       setDialogState(() {
-        _showPhoneField = false;
-        _phoneController.clear();
+        _showEmailField = false;
+        _emailController.clear();
       });
     } catch (e) {
       if (context.mounted) {
@@ -352,7 +352,8 @@ class _ListScreenState extends State<ListScreen> {
                                                                                           CircleAvatar(
                                                                                             radius: 15,
                                                                                             backgroundColor: Colors.grey.shade200,
-                                                                                            child: Text(_currentList.ownerName[0].toUpperCase()),
+                                                                                            backgroundImage: _currentList.ownerUid == Provider.of<UserProvider>(context).user?.uid && Provider.of<UserProvider>(context).user?.profilePicture != null ? NetworkImage(Provider.of<UserProvider>(context).user!.profilePicture!) : null,
+                                                                                            child: (_currentList.ownerUid == Provider.of<UserProvider>(context).user?.uid && Provider.of<UserProvider>(context).user?.profilePicture == null) ? Text(_currentList.ownerName[0].toUpperCase()) : null,
                                                                                           ),
                                                                                           const SizedBox(width: 10),
                                                                                           Text(
@@ -371,12 +372,13 @@ class _ListScreenState extends State<ListScreen> {
                                                                                       color: Colors.grey.shade300,
                                                                                     ),
                                                                                     // Collaborators list
-                                                                                    ..._currentList.collaborators.map((collaborator) => ListTile(
+                                                                                    ..._currentList.collaborators.where((collaborator) => collaborator.uid != Provider.of<UserProvider>(context).user?.uid).map((collaborator) => ListTile(
                                                                                           dense: true,
                                                                                           leading: CircleAvatar(
                                                                                             radius: 15,
                                                                                             backgroundColor: Colors.grey.shade200,
-                                                                                            child: Text(collaborator.name[0].toUpperCase()),
+                                                                                            backgroundImage: collaborator.profilePicture != null ? NetworkImage(collaborator.profilePicture!) : null,
+                                                                                            child: collaborator.profilePicture == null ? Text(collaborator.name[0].toUpperCase()) : null,
                                                                                           ),
                                                                                           title: Text(
                                                                                             collaborator.name,
@@ -395,7 +397,7 @@ class _ListScreenState extends State<ListScreen> {
                                                                             TextButton(
                                                                               onPressed: () {
                                                                                 setDialogState(() {
-                                                                                  _showPhoneField = true;
+                                                                                  _showEmailField = true;
                                                                                 });
                                                                               },
                                                                               child: const Text(
@@ -403,22 +405,16 @@ class _ListScreenState extends State<ListScreen> {
                                                                                 style: TextStyle(color: Colors.grey),
                                                                               ),
                                                                             ),
-                                                                            if (_showPhoneField)
+                                                                            if (_showEmailField)
                                                                               Padding(
                                                                                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                                                                                 child: Row(
                                                                                   children: [
                                                                                     Expanded(
                                                                                       child: TextField(
-                                                                                        maxLength: 10,
-                                                                                        buildCounter: (BuildContext context, {required int currentLength, required bool isFocused, required int? maxLength}) => null,
-                                                                                        controller: _phoneController,
+                                                                                        controller: _emailController,
                                                                                         decoration: InputDecoration(
-                                                                                          hintText: 'Enter phone number',
-                                                                                          hintStyle: TextStyle(
-                                                                                            color: Colors.grey.shade400,
-                                                                                            fontSize: 12,
-                                                                                          ),
+                                                                                          hintText: 'Enter email address',
                                                                                           border: OutlineInputBorder(
                                                                                             borderRadius: BorderRadius.circular(8),
                                                                                           ),
@@ -437,12 +433,12 @@ class _ListScreenState extends State<ListScreen> {
                                                                                                   icon: const Icon(Icons.add),
                                                                                                   onPressed: () => _addCollaborator(
                                                                                                     context,
-                                                                                                    _phoneController.text,
+                                                                                                    _emailController.text,
                                                                                                     setDialogState,
                                                                                                   ),
                                                                                                 ),
                                                                                         ),
-                                                                                        keyboardType: TextInputType.phone,
+                                                                                        keyboardType: TextInputType.emailAddress,
                                                                                       ),
                                                                                     ),
                                                                                   ],
@@ -542,95 +538,6 @@ class _ListScreenState extends State<ListScreen> {
                                             ),
                                           ),
                                         ),
-                                        Positioned(
-                                          right: 0,
-                                          top: 20,
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              showModalBottomSheet(
-                                                context: context,
-                                                isScrollControlled: true,
-                                                constraints: BoxConstraints(
-                                                  maxWidth:
-                                                      MediaQuery.of(context)
-                                                          .size
-                                                          .width,
-                                                ),
-                                                builder:
-                                                    (BuildContext context) {
-                                                  return Container(
-                                                    width: double.infinity,
-                                                    padding:
-                                                        const EdgeInsets.all(
-                                                            16),
-                                                    child: Column(
-                                                      mainAxisSize:
-                                                          MainAxisSize.min,
-                                                      crossAxisAlignment:
-                                                          CrossAxisAlignment
-                                                              .start,
-                                                      children: [
-                                                        Text(
-                                                          'Choose your magnet',
-                                                          style:
-                                                              Theme.of(context)
-                                                                  .textTheme
-                                                                  .titleLarge,
-                                                        ),
-                                                        const SizedBox(
-                                                            height: 16),
-                                                        Wrap(
-                                                          spacing: 10,
-                                                          runSpacing: 10,
-                                                          children: stickers
-                                                              .map((String
-                                                                  sticker) {
-                                                            return GestureDetector(
-                                                              onTap: () {
-                                                                Navigator.pop(
-                                                                    context);
-                                                                setDialogState(
-                                                                    () {
-                                                                  _selectedSticker =
-                                                                      sticker;
-                                                                });
-                                                              },
-                                                              child: Container(
-                                                                padding:
-                                                                    const EdgeInsets
-                                                                        .all(5),
-                                                                decoration:
-                                                                    BoxDecoration(
-                                                                  border: Border.all(
-                                                                      color: Colors
-                                                                          .grey
-                                                                          .shade200),
-                                                                  borderRadius:
-                                                                      BorderRadius
-                                                                          .circular(
-                                                                              8),
-                                                                ),
-                                                                child:
-                                                                    Image.asset(
-                                                                  'assets/stickers/$sticker',
-                                                                  height: 60,
-                                                                ),
-                                                              ),
-                                                            );
-                                                          }).toList(),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  );
-                                                },
-                                              );
-                                            },
-                                            child: Image.asset(
-                                              'assets/stickers/$_selectedSticker',
-                                              height: 50,
-                                            ),
-                                          ),
-                                        ),
                                       ],
                                     ),
                                   );
@@ -661,17 +568,29 @@ class _ListScreenState extends State<ListScreen> {
                                           color: Colors.white, width: 2),
                                     ),
                                     child: CircleAvatar(
-                                      radius: 10,
+                                      radius: 13,
                                       backgroundColor: Colors.grey[300],
-                                      child: Text(
-                                        _currentList.collaborators[i].name[0]
-                                            .toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Colors.black87,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
-                                        ),
-                                      ),
+                                      backgroundImage: _currentList
+                                                  .collaborators[i]
+                                                  .profilePicture !=
+                                              null
+                                          ? NetworkImage(_currentList
+                                              .collaborators[i].profilePicture!)
+                                          : null,
+                                      child: _currentList.collaborators[i]
+                                                  .profilePicture ==
+                                              null
+                                          ? Text(
+                                              _currentList
+                                                  .collaborators[i].name[0]
+                                                  .toUpperCase(),
+                                              style: const TextStyle(
+                                                color: Colors.black87,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 10,
+                                              ),
+                                            )
+                                          : null,
                                     ),
                                   ),
                                 ),
@@ -804,6 +723,13 @@ class _ListScreenState extends State<ListScreen> {
                       color: item.isChecked ? Colors.grey : Colors.black,
                     ),
                     onSubmitted: (value) => _editItem(item.id, value),
+                  ),
+                  subtitle: Text(_currentList.collaborators
+                      .firstWhere((c) => c.uid == item.addedBy)
+                      .name),
+                  subtitleTextStyle: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
                   ),
                 ),
               );

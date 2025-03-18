@@ -101,23 +101,20 @@ class AuthWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
-      
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             backgroundColor: Colors.white,
             body: Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-              ),
+              child: CircularProgressIndicator(),
             ),
           );
         }
 
         if (snapshot.hasData && snapshot.data != null) {
           // User is logged in
-          return FutureBuilder<void>(
+          return FutureBuilder(
             future: Provider.of<UserProvider>(context, listen: false)
                 .initializeUser(snapshot.data!.uid),
             builder: (context, userSnapshot) {
@@ -125,13 +122,43 @@ class AuthWrapper extends StatelessWidget {
                 return const Scaffold(
                   backgroundColor: Colors.white,
                   body: Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                    child: CircularProgressIndicator(),
+                  ),
+                );
+              }
+
+              if (userSnapshot.hasError) {
+                return Scaffold(
+                  backgroundColor: Colors.white,
+                  body: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline,
+                            size: 48, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text('Error: ${userSnapshot.error}'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () async {
+                            await FirebaseAuth.instance.signOut();
+                          },
+                          child: const Text('Sign Out'),
+                        ),
+                      ],
                     ),
                   ),
                 );
               }
-              return HomeScreen();
+
+              final user = Provider.of<UserProvider>(context).user;
+              if (user == null) {
+                // If user is still null after initialization, sign out
+                FirebaseAuth.instance.signOut();
+                return LoginScreen();
+              }
+
+              return const HomeScreen();
             },
           );
         }

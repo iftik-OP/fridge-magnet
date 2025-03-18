@@ -9,8 +9,7 @@ class OTPScreen extends StatelessWidget {
   final TextEditingController otpController = TextEditingController();
 
   void _handleVerify(BuildContext context) {
-    FirebaseServices()
-        .signInWithPhoneNumber(verificationId, otpController.text, phoneNumber, context);
+    FirebaseServices().signInWithGoogle();
   }
 
   @override

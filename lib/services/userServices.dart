@@ -5,23 +5,26 @@ import 'package:shopping_list/models/user.dart';
 class UserServices {
   final auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
 
-  Future<User?> createUser(String name, String phoneNumber) async {
+  Future<User?> createUser(String name, String email) async {
     try {
       // Get current user's UID
       final String uid = _auth.currentUser!.uid;
 
       // Create user document in Firestore
-      final userDoc =
-          await FirebaseFirestore.instance.collection('users').doc(uid).set({
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'name': name,
-        'phoneNumber': phoneNumber,
+        'email': email,
         'lists': [], // Initialize empty lists array
         'createdAt': FieldValue.serverTimestamp(),
       });
 
       // Create User object
-      final User user =
-          User(uid: uid, name: name, phoneNumber: phoneNumber, lists: []);
+      final User user = User(
+        uid: uid,
+        name: name,
+        email: email,
+        lists: [],
+      );
 
       return user;
     } catch (e) {
@@ -41,10 +44,10 @@ class UserServices {
     return null;
   }
 
-  Future<User?> getUserByPhone(String phoneNumber) async {
+  Future<User?> getUserByEmail(String email) async {
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
-        .where('phoneNumber', isEqualTo: phoneNumber)
+        .where('email', isEqualTo: email)
         .get();
     if (userDoc.docs.isNotEmpty) {
       final userData = userDoc.docs[0].data() as Map<String, dynamic>;

@@ -5,8 +5,13 @@ import 'package:shopping_list/screens/homeScreen.dart';
 import 'package:shopping_list/services/userServices.dart';
 
 class RegisterScreen extends StatefulWidget {
-  final String phoneNumber;
-  const RegisterScreen({super.key, required this.phoneNumber});
+  final String email;
+  final String displayName;
+  const RegisterScreen({
+    super.key,
+    required this.email,
+    required this.displayName,
+  });
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -16,20 +21,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController nameController = TextEditingController();
   bool error = false;
 
+  @override
+  void initState() {
+    super.initState();
+    nameController.text = widget.displayName;
+  }
+
   Future<void> _handleRegister() async {
     if (nameController.text.isEmpty) {
       setState(() {
         error = true;
       });
     } else {
-      final user = await UserServices()
-          .createUser(nameController.text, widget.phoneNumber);
+      final user =
+          await UserServices().createUser(nameController.text, widget.email);
       if (user != null) {
         Provider.of<UserProvider>(context, listen: false).setUser(user);
         Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(
-                builder: (context) => const HomeScreen()),
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
             (route) => false);
       }
     }
@@ -38,42 +48,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: SizedBox(
-            height:
-                MediaQuery.of(context).size.height - 48, // Account for padding
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const SizedBox(height: 50),
-                    Transform.rotate(
-                      angle: 0 * 3.14159 / 180,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.white, width: 5),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              spreadRadius: 0.5,
-                              blurRadius: 2,
-                              offset: const Offset(-2, 3),
-                            ),
-                          ],
-                        ),
-                        child: Image.asset(
-                            'assets/stickers/hawkeye-asking-name.gif',
-                            width: 150),
-                      ),
-                    ),
+                    Image.asset('assets/stickers/fridge_sticker.png',
+                        height: 200),
                     const SizedBox(height: 50),
-                    Text(
-                        'Obviously we can\'t call you ${widget.phoneNumber}, So what should we call you?',
+                    Text('What should we call you?',
                         textAlign: TextAlign.center,
                         style: Theme.of(context)
                             .textTheme
@@ -104,7 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     if (error)
                       const Text(
-                        'We don\'t have enough space for your number so just enter your name!!',
+                        'Please enter your name to continue',
                         style: TextStyle(color: Colors.red, fontSize: 12),
                         textAlign: TextAlign.center,
                       ),

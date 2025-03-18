@@ -223,14 +223,20 @@ class ListCard extends StatelessWidget {
                     child: CircleAvatar(
                       radius: 10,
                       backgroundColor: Colors.grey[300],
-                      child: Text(
-                        list.collaborators[i].name[0].toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.black87,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 10,
-                        ),
-                      ),
+                      backgroundImage: list.collaborators[i].profilePicture !=
+                              null
+                          ? NetworkImage(list.collaborators[i].profilePicture!)
+                          : null,
+                      child: list.collaborators[i].profilePicture == null
+                          ? Text(
+                              list.collaborators[i].name[0].toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.black87,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                 ),

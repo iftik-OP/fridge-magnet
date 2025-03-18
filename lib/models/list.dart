@@ -5,7 +5,7 @@ import 'package:shopping_list/models/user.dart';
 class ShoppingList {
   final String? id; // Firebase document ID
   final String name;
-  final List<User> collaborators;
+  final List<User> collaborators; // Store full User objects
   final Color startColor;
   final Color endColor;
   final List<ListItem> items;
@@ -69,7 +69,7 @@ class ShoppingList {
       id: documentId ?? map['id'] as String?,
       name: map['name'] as String,
       collaborators: (map['collaborators'] as List)
-          .map((user) => User.fromMap(user))
+          .map((userMap) => User.fromMap(userMap))
           .toList(),
       startColor: Color(map['startColor'] ?? 0xFF000000),
       endColor: Color(map['endColor'] ?? 0xFF000000),

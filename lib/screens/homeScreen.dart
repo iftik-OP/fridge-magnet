@@ -11,6 +11,7 @@ import 'package:shopping_list/models/user.dart';
 import 'package:shopping_list/screens/listScreen.dart';
 import 'package:shopping_list/services/listServices.dart';
 import 'package:shopping_list/services/userServices.dart';
+import 'package:shopping_list/services/firebaseServices.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,16 +23,16 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ListServices _listServices = ListServices();
   TextEditingController listNameController = TextEditingController();
-  TextEditingController phoneController = TextEditingController();
-  bool showPhoneField = false;
+  TextEditingController emailController = TextEditingController();
+  bool showEmailField = false;
   List<User> collaborators = [];
   bool isLoadingCollaborator = false;
 
   void resetDialogState() {
     setState(() {
-      showPhoneField = false;
+      showEmailField = false;
       collaborators.clear();
-      phoneController.clear();
+      emailController.clear();
       listNameController.clear();
     });
   }
@@ -39,15 +40,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     listNameController.dispose();
-    phoneController.dispose();
+    emailController.dispose();
     super.dispose();
   }
 
   Future<void> addCollaborator(
-      BuildContext context, String phoneNumber, Function setDialogState) async {
-    if (phoneNumber.isEmpty) {
+      BuildContext context, String email, Function setDialogState) async {
+    if (email.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a phone number')),
+        const SnackBar(content: Text('Please enter an email')),
       );
       return;
     }
@@ -58,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final userService = UserServices();
-      final collaborator = await userService.getUserByPhone(phoneNumber);
+      final collaborator = await userService.getUserByEmail(email);
 
       if (collaborator == null) {
         if (context.mounted) {
@@ -81,8 +82,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
       setDialogState(() {
         collaborators.add(collaborator);
-        showPhoneField = false;
-        phoneController.clear();
+        showEmailField = false;
+        emailController.clear();
       });
     } catch (e) {
       if (context.mounted) {
@@ -108,10 +109,19 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<UserProvider>(context).user;
-    if (user == null) return const SizedBox.shrink();
+    if (user == null) {
+      // Show loading indicator while user data is being fetched
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.white,
         centerTitle: false,
         title: Image.asset('assets/logo/sticker-logo.png', height: 50),
         actions: [
@@ -131,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ?.copyWith(fontWeight: FontWeight.bold, fontSize: 12),
               ),
               Text(
-                user?.name ?? 'User',
+                user.name,
                 style: Theme.of(context)
                     .textTheme
                     .titleLarge
@@ -140,13 +150,32 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           const SizedBox(width: 10),
-          const CircleAvatar(
-            radius: 20,
-            child: Text('I'),
+          PopupMenuButton(
+            offset: const Offset(0, 40),
+            child: CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.grey.shade200,
+              backgroundImage: user.profilePicture != null
+                  ? NetworkImage(user.profilePicture!)
+                  : null,
+              child: user.profilePicture == null
+                  ? Text(user.name[0].toUpperCase())
+                  : null,
+            ),
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                child: ListTile(
+                  leading: const Icon(Icons.logout),
+                  title: const Text('Logout'),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await FirebaseServices().signOut();
+                  },
+                ),
+              ),
+            ],
           ),
-          const SizedBox(
-            width: 20,
-          ),
+          const SizedBox(width: 20),
         ],
         automaticallyImplyLeading: false,
       ),
@@ -175,7 +204,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline,
+                            size: 48, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text('Error: ${snapshot.error}'),
+                      ],
+                    ),
+                  );
                 }
 
                 final lists = snapshot.data ?? [];
@@ -241,6 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 500,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(16),
+                          color: Colors.white,
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(0.0),
@@ -317,8 +357,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                                     radius: 15,
                                                     backgroundColor:
                                                         Colors.grey.shade200,
-                                                    child: Text(user.name[0]
-                                                        .toUpperCase()),
+                                                    backgroundImage:
+                                                        user.profilePicture !=
+                                                                null
+                                                            ? NetworkImage(user
+                                                                .profilePicture!)
+                                                            : null,
+                                                    child:
+                                                        user.profilePicture ==
+                                                                null
+                                                            ? Text(user.name[0]
+                                                                .toUpperCase())
+                                                            : null,
                                                   ),
                                                   const SizedBox(width: 10),
                                                   Text(
@@ -344,9 +394,20 @@ class _HomeScreenState extends State<HomeScreen> {
                                                         radius: 15,
                                                         backgroundColor: Colors
                                                             .grey.shade200,
-                                                        child: Text(collaborator
-                                                            .name[0]
-                                                            .toUpperCase()),
+                                                        backgroundImage: collaborator
+                                                                    .profilePicture !=
+                                                                null
+                                                            ? NetworkImage(
+                                                                collaborator
+                                                                    .profilePicture!)
+                                                            : null,
+                                                        child: collaborator
+                                                                    .profilePicture ==
+                                                                null
+                                                            ? Text(collaborator
+                                                                .name[0]
+                                                                .toUpperCase())
+                                                            : null,
                                                       ),
                                                       title: Text(
                                                         collaborator.name,
@@ -373,7 +434,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     TextButton(
                                       onPressed: () {
                                         setDialogState(() {
-                                          showPhoneField = true;
+                                          showEmailField = true;
                                         });
                                       },
                                       child: const Text(
@@ -381,7 +442,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         style: TextStyle(color: Colors.grey),
                                       ),
                                     ),
-                                    if (showPhoneField)
+                                    if (showEmailField)
                                       Padding(
                                         padding: const EdgeInsets.symmetric(
                                             vertical: 8.0),
@@ -389,19 +450,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                           children: [
                                             Expanded(
                                               child: TextField(
-                                                maxLength: 10,
-                                                buildCounter: (BuildContext
-                                                            context,
-                                                        {required int
-                                                            currentLength,
-                                                        required bool isFocused,
-                                                        required int?
-                                                            maxLength}) =>
-                                                    null,
-                                                controller: phoneController,
+                                                controller: emailController,
                                                 decoration: InputDecoration(
                                                   hintText:
-                                                      'Enter phone number',
+                                                      'Enter collaborator email',
                                                   hintStyle: TextStyle(
                                                       color:
                                                           Colors.grey.shade400,
@@ -434,14 +486,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                                               onPressed: () =>
                                                                   addCollaborator(
                                                                 context,
-                                                                phoneController
+                                                                emailController
                                                                     .text,
                                                                 setDialogState,
                                                               ),
                                                             ),
                                                 ),
                                                 keyboardType:
-                                                    TextInputType.phone,
+                                                    TextInputType.emailAddress,
                                               ),
                                             ),
                                           ],

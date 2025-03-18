@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shopping_list/models/list.dart';
 import 'package:shopping_list/models/listItem.dart';
 import 'package:uuid/uuid.dart';
+import 'package:rxdart/rxdart.dart';
 
 class ListServices {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -10,29 +11,28 @@ class ListServices {
 
   // Get all lists for a specific user (where they are owner or collaborator)
   Stream<List<ShoppingList>> getUserLists(String userId) {
-    // Get lists where user is owner or collaborator
+    // Get the user document to get their lists array
     return _firestore
-        .collection('lists')
-        .where(Filter.or(
-          Filter('ownerUid', isEqualTo: userId),
-          Filter('collaborators', arrayContains: {'id': userId}),
-        ))
+        .collection('users')
+        .doc(userId)
         .snapshots()
-        .map((snapshot) {
-      return snapshot.docs
+        .asyncMap((userDoc) async {
+      if (!userDoc.exists) return [];
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final List<String> listIds = List<String>.from(userData['lists'] ?? []);
+
+      if (listIds.isEmpty) return [];
+
+      // Get all lists where the ID is in the user's lists array
+      final listsSnapshot = await _firestore
+          .collection('lists')
+          .where(FieldPath.documentId, whereIn: listIds)
+          .get();
+
+      return listsSnapshot.docs
           .map((doc) => ShoppingList.fromMap(doc.data(), doc.id))
           .toList();
-
-      // Remove duplicates based on list ID
-      // return lists.fold<List<ShoppingList>>(
-      //   [],
-      //   (list, element) {
-      //     if (!list.any((item) => item.id == element.id)) {
-      //       list.add(element);
-      //     }
-      //     return list;
-      //   },
-      // );
     });
   }
 
@@ -47,6 +47,19 @@ class ListServices {
   // Create a new shopping list
   Future<String> createShoppingList(ShoppingList list) async {
     final docRef = await _firestore.collection('lists').add(list.toMap());
+
+    // Update lists array for owner
+    await _firestore.collection('users').doc(list.ownerUid).update({
+      'lists': FieldValue.arrayUnion([docRef.id])
+    });
+
+    // Update lists array for all collaborators
+    for (var collaborator in list.collaborators) {
+      await _firestore.collection('users').doc(collaborator.uid).update({
+        'lists': FieldValue.arrayUnion([docRef.id])
+      });
+    }
+
     return docRef.id;
   }
 
@@ -77,9 +90,44 @@ class ListServices {
     }
     if (currentData['collaborators'] != updatedData['collaborators']) {
       updateData['collaborators'] = updatedData['collaborators'];
+
+      // Get the old list to compare collaborators
+      final oldList = ShoppingList.fromMap(currentData);
+
+      // Find removed collaborators
+      final removedCollaborators = oldList.collaborators
+          .where((c) => !list.collaborators.any((nc) => nc.uid == c.uid))
+          .toList();
+
+      // Find new collaborators
+      final newCollaborators = list.collaborators
+          .where((c) => !oldList.collaborators.any((oc) => oc.uid == c.uid))
+          .toList();
+
+      // Update lists arrays for removed collaborators
+      for (var collaborator in removedCollaborators) {
+        await _firestore.collection('users').doc(collaborator.uid).update({
+          'lists': FieldValue.arrayRemove([listId])
+        });
+      }
+
+      // Update lists arrays for new collaborators
+      for (var collaborator in newCollaborators) {
+        await _firestore.collection('users').doc(collaborator.uid).update({
+          'lists': FieldValue.arrayUnion([listId])
+        });
+      }
     }
     if (currentData['ownerUid'] != updatedData['ownerUid']) {
       updateData['ownerUid'] = updatedData['ownerUid'];
+
+      // Update lists arrays for old and new owners
+      await _firestore.collection('users').doc(currentData['ownerUid']).update({
+        'lists': FieldValue.arrayRemove([listId])
+      });
+      await _firestore.collection('users').doc(updatedData['ownerUid']).update({
+        'lists': FieldValue.arrayUnion([listId])
+      });
     }
     if (currentData['ownerName'] != updatedData['ownerName']) {
       updateData['ownerName'] = updatedData['ownerName'];
@@ -95,6 +143,24 @@ class ListServices {
 
   // Delete a shopping list
   Future<void> deleteShoppingList(String listId) async {
+    final listDoc = await _firestore.collection('lists').doc(listId).get();
+    if (!listDoc.exists) return;
+
+    final list = ShoppingList.fromMap(listDoc.data()!);
+
+    // Remove list ID from owner's lists array
+    await _firestore.collection('users').doc(list.ownerUid).update({
+      'lists': FieldValue.arrayRemove([listId])
+    });
+
+    // Remove list ID from all collaborators' lists arrays
+    for (var collaborator in list.collaborators) {
+      await _firestore.collection('users').doc(collaborator.uid).update({
+        'lists': FieldValue.arrayRemove([listId])
+      });
+    }
+
+    // Delete the list document
     await _firestore.collection('lists').doc(listId).delete();
   }
 

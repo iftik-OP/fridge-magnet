@@ -1,14 +1,15 @@
 import 'package:shopping_list/models/list.dart';
+import 'package:flutter/material.dart';
 
 class User {
-  final String phoneNumber;
+  final String email;
   final String name;
   final List<ShoppingList> lists;
   final String? profilePicture;
   final String uid;
 
   User({
-    required this.phoneNumber,
+    required this.email,
     required this.name,
     required this.lists,
     this.profilePicture,
@@ -16,14 +17,14 @@ class User {
   });
 
   User copyWith({
-    String? phoneNumber,
+    String? email,
     String? name,
     List<ShoppingList>? lists,
     String? profilePicture,
     String? uid,
   }) {
     return User(
-      phoneNumber: phoneNumber ?? this.phoneNumber,
+      email: email ?? this.email,
       name: name ?? this.name,
       lists: lists ?? this.lists,
       profilePicture: profilePicture ?? this.profilePicture,
@@ -33,7 +34,7 @@ class User {
 
   Map<String, dynamic> toMap() {
     return {
-      'phoneNumber': phoneNumber,
+      'email': email,
       'name': name,
       'lists': lists.map((list) => list.toMap()).toList(),
       'profilePicture': profilePicture,
@@ -43,13 +44,26 @@ class User {
 
   factory User.fromMap(Map<String, dynamic> map) {
     return User(
-      phoneNumber: map['phoneNumber'] as String,
+      email: map['email'] as String,
       name: map['name'] as String,
-      lists: List<ShoppingList>.from(
-        (map['lists'] as List).map((list) => ShoppingList.fromMap(list)),
-      ),
+      lists: (map['lists'] as List<dynamic>?)?.map((list) {
+            if (list is Map<String, dynamic>) {
+              return ShoppingList.fromMap(list);
+            }
+            return ShoppingList(
+              name: '',
+              collaborators: [],
+              startColor: const Color(0xFF000000),
+              endColor: const Color(0xFF000000),
+              items: [],
+              imageAsset: '',
+              ownerUid: '',
+              ownerName: '',
+            );
+          }).toList() ??
+          [],
       profilePicture: map['profilePicture'] as String?,
-      uid: map['uid'] ?? '',
+      uid: map['uid'] as String,
     );
   }
 }

@@ -2,79 +2,94 @@ import 'package:flutter/material.dart';
 import 'package:shopping_list/services/firebaseServices.dart';
 
 class LoginScreen extends StatelessWidget {
-  LoginScreen({super.key});
-  final TextEditingController phoneController = TextEditingController();
+  const LoginScreen({super.key});
 
-  void _handleLogin(BuildContext context) {
-    FirebaseServices().verifyPhoneNumber(phoneController.text, context);
+  void _handleGoogleSignIn(BuildContext context) {
+    FirebaseServices().signInWithGoogle();
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final isSmallScreen = screenSize.width < 300;
+
     return Scaffold(
       body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 200),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
+        padding: EdgeInsets.all(24),
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Login to',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineLarge
-                            ?.copyWith(
-                                fontWeight: FontWeight.w900, fontSize: 20)),
-                    const SizedBox(height: 10),
-                    Text('FRIDGE\nMAGNET',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineLarge
-                            ?.copyWith(
-                                fontWeight: FontWeight.w900, fontSize: 40)),
-                  ],
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    if (isSmallScreen) {
+                      return Column(
+                        children: [
+                          _buildWelcomeText(context),
+                          const SizedBox(height: 20),
+                          Image.asset(
+                            'assets/stickers/fridge_sticker.png',
+                            height: screenSize.height * 0.25,
+                          ),
+                        ],
+                      );
+                    } else {
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildWelcomeText(context),
+                          Image.asset(
+                            'assets/stickers/fridge_sticker.png',
+                            height: screenSize.height * 0.18,
+                          ),
+                        ],
+                      );
+                    }
+                  },
                 ),
-                const SizedBox(width: 10),
-                Image.asset('assets/stickers/fridge_sticker.png', width: 150),
+                SizedBox(height: screenSize.height * 0.08),
+                SizedBox(
+                  height: 50,
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _handleGoogleSignIn(context),
+                    icon: Image.asset(
+                      'assets/icons/google_logo.png',
+                      height: 24,
+                    ),
+                    label: const Text('Sign in with Google'),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 50),
-            TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.number,
-              maxLength: 10,
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.phone, color: Colors.grey),
-                hintText: 'Enter your phone number',
-                hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.grey,
-                    ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                counterText: '', // Hides the character counter
-              ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 50,
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  _handleLogin(context);
-                },
-                child: const Text('Login'),
-              ),
-            )
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildWelcomeText(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Welcome to',
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                fontWeight: FontWeight.w900,
+                fontSize: 20,
+              ),
+        ),
+        Text(
+          'FRIDGE\nMAGNET',
+          textAlign: TextAlign.start,
+          style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                fontWeight: FontWeight.w900,
+                fontSize: 40,
+              ),
+        ),
+      ],
     );
   }
 }

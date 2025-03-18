@@ -45,8 +45,7 @@ class ListProvider with ChangeNotifier {
     try {
       final newList = ShoppingList(
         name: name,
-        collaborators:
-            collaborators, // Initially empty, owner will be added by service
+        collaborators: collaborators,
         startColor: startColor,
         endColor: endColor,
         items: [],
@@ -57,6 +56,8 @@ class ListProvider with ChangeNotifier {
 
       await _listServices.createShoppingList(newList);
       await fetchLists(); // Refresh the lists
+      await UserProvider()
+          .refreshUser(); // Refresh user data to update lists array
     } catch (e) {
       print('Error creating list: $e');
       rethrow;
@@ -114,6 +115,8 @@ class ListProvider with ChangeNotifier {
     try {
       await _listServices.deleteShoppingList(listId);
       await fetchLists(); // Refresh the lists
+      await UserProvider()
+          .refreshUser(); // Refresh user data to update lists array
     } catch (e) {
       print('Error deleting list: $e');
       rethrow;
@@ -166,6 +169,8 @@ class ListProvider with ChangeNotifier {
 
       // Update local state
       await fetchLists();
+      await UserProvider()
+          .refreshUser(); // Refresh user data to update lists array
     } catch (e) {
       throw Exception('Error adding collaborator: $e');
     }
@@ -189,10 +194,12 @@ class ListProvider with ChangeNotifier {
 
       final updatedList = list.copyWith(
         collaborators:
-            list.collaborators.where((c) => c.uid != userId).toList(),
+            list.collaborators.where((user) => user.uid != userId).toList(),
       );
       await _listServices.updateShoppingList(listId, updatedList);
       await fetchLists(); // Refresh the lists
+      await UserProvider()
+          .refreshUser(); // Refresh user data to update lists array
     } catch (e) {
       print('Error removing collaborator: $e');
       rethrow;
